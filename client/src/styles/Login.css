@@ -1,0 +1,28 @@
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.login-title {
+  margin-bottom: 8px !important;
+  color: var(--color-text);
+  text-align: center;
+}
+
+.login-subtitle {
+  display: block;
+  margin-bottom: 24px;
+  text-align: center;
+  color: var(--color-muted);
+}

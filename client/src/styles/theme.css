@@ -1,0 +1,214 @@
+/* Factory Inventory & Production Management - Theme */
+:root {
+  --color-primary: #0F766E;
+  --color-accent: #F59E0B;
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-text: #0F172A;
+  --color-muted: #64748B;
+  --color-border: rgba(15, 23, 42, 0.12);
+  --color-success: #16A34A;
+  --color-danger: #DC2626;
+  --color-warning: #F59E0B;
+  --color-info: #0EA5E9;
+
+  /* Status tag colors */
+  --status-draft: #94A3B8;
+  --status-confirmed: #0EA5E9;
+  --status-completed: #16A34A;
+  --status-dispatched: #0F766E;
+  --status-cancelled: #DC2626;
+  --status-in-progress: #F59E0B;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --radius: 8px;
+  --spacing-unit: 8px;
+}
+
+[data-theme="dark"] {
+  --color-primary: #0F766E;
+  --color-accent: #F59E0B;
+  --color-bg: #0B1220;
+  --color-surface: #0F172A;
+  --color-text: #E2E8F0;
+  --color-muted: #94A3B8;
+  --color-border: rgba(148, 163, 184, 0.25);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.45), 0 4px 6px -4px rgb(0 0 0 / 0.45);
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.app-layout {
+  min-height: 100vh;
+}
+
+.fullscreen-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.auth-blocked,
+.app-error {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface) 100%);
+}
+
+.auth-blocked-card,
+.app-error-card {
+  width: 100%;
+  max-width: 520px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.auth-blocked-actions,
+.app-error-actions {
+  margin-top: 16px;
+}
+
+.app-header {
+  background: var(--color-primary) !important;
+  color: white;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-header .ant-typography {
+  color: white !important;
+}
+
+.app-header-toggle {
+  color: white !important;
+}
+
+.app-header-title {
+  color: white !important;
+  flex: 1;
+}
+
+.app-header-user {
+  color: white !important;
+}
+
+.app-sider {
+  background: var(--color-surface) !important;
+  box-shadow: var(--shadow-md);
+}
+
+.app-sider-brand {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-sider-brand-text {
+  color: var(--color-primary) !important;
+}
+
+.app-sider-menu {
+  border-right: 0;
+}
+
+.app-content {
+  margin: 24px;
+  padding: 24px;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  min-height: 280px;
+}
+
+.page-title {
+  color: var(--color-text);
+  margin-bottom: 24px !important;
+}
+
+.reports-toolbar {
+  margin-bottom: 16px;
+}
+
+.reports-action {
+  margin-bottom: 16px;
+}
+
+.reports-section-title {
+  margin-top: 24px !important;
+}
+
+.status-tag-draft { background: var(--status-draft); color: white; border: none; }
+.status-tag-confirmed { background: var(--status-confirmed); color: white; border: none; }
+.status-tag-completed { background: var(--status-completed); color: white; border: none; }
+.status-tag-dispatched { background: var(--status-dispatched); color: white; border: none; }
+.status-tag-cancelled { background: var(--status-cancelled); color: white; border: none; }
+.status-tag-in_progress { background: var(--status-in-progress); color: white; border: none; }
+
+.ant-btn-primary {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+.ant-btn-primary:hover {
+  background: #0d5c55 !important;
+  border-color: #0d5c55 !important;
+}
+
+.ant-menu-item-selected {
+  background: rgba(15, 118, 110, 0.1) !important;
+  color: var(--color-primary) !important;
+}
+
+.ant-card {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-header-appearance {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-header-appearance-label {
+  color: white !important;
+  font-size: 12px;
+}
+
+.app-header-appearance-select {
+  min-width: 120px;
+}
+
+.app-header-appearance-select .ant-select-selector {
+  border-color: transparent !important;
+}
+
+[data-theme="dark"] .app-header-appearance-select .ant-select-selector {
+  background: rgba(15, 23, 42, 0.6) !important;
+  color: var(--color-text) !important;
+}
+
+[data-theme="dark"] .app-header-appearance-select .ant-select-arrow {
+  color: var(--color-text) !important;
+}
+
+.ant-table {
+  border-radius: var(--radius);
+}
