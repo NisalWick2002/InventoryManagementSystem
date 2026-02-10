@@ -1,12 +1,28 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+// server/api/[...path].ts
+import '../dist/config/firebase.js';
+import { connectDb } from '../dist/db/index.js';
+import { createApp } from '../dist/app.js';
 
-// NOTE: adjust import based on what server/src/app.ts exports:
-import { createApp } from "../src/app";
-
-// Create the Express app once (kept warm between invocations when possible)
 const app = createApp();
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  // Express can handle Vercel req/res directly
-  return app(req as any, res as any);
+// Ensure DB connects once per warm function instance
+let initPromise: Promise<void> | null = null;
+
+async function ensureInit() {
+  if (!initPromise) {
+    initPromise = (async () => {
+      await connectDb();
+    })();
+  }
+  return initPromise;
+}
+
+export default async function handler(req: any, res: any) {
+  try {
+    await ensureInit();
+    return app(req, res);
+  } catch (err) {
+    console.error('Vercel init failed:', err);
+    res.status(500).json({ success: false, error: { code: 'INIT_FAILED', message: 'Server init failed' } });
+  }
 }
