@@ -1,5 +1,5 @@
 import express from 'express';
-import cors from 'cors';
+import cors, { type CorsOptions } from 'cors';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 
@@ -20,9 +20,31 @@ import { errorHandler } from './middleware/errorHandler.js';
 
 export function createApp() {
   const app = express();
-  const corsOrigins = env.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean);
+  const allowlist = new Set(
+    env.CORS_ORIGINS.split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
 
-  app.use(cors({ origin: corsOrigins.length ? corsOrigins : true, credentials: true }));
+  const corsOptions: CorsOptions = {
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowlist.has(origin)) return callback(null, true);
+      if (env.ALLOW_VERCEL_PREVIEWS && origin.endsWith('.vercel.app')) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type'],
+    optionsSuccessStatus: 204,
+  };
+
+  // Keep CORS first so all responses (including errors) can include CORS headers.
+  app.use(cors(corsOptions));
+  app.options('*', cors(corsOptions));
+
   app.use(express.json());
 
   if (env.RATE_LIMIT_ENABLED) {

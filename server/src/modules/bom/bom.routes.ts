@@ -2,7 +2,7 @@ import { Router, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import { requireAuth, loadUser, requireRole, type AppRequest } from '../../middleware/auth.js';
-import { validateBody, validateQuery } from '../../middleware/validate.js';
+import { validateBody } from '../../middleware/validate.js';
 import { BOM, Product } from '../../db/models/index.js';
 import { logAudit } from '../../utils/audit.js';
 import { unitSchema } from '../../utils/validation.js';
@@ -172,3 +172,4 @@ router.delete('/boms/:id', internalOnly, async (req: AppRequest, res: Response, 
 });
 
 export default router;
+

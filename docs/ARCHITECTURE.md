@@ -1,56 +1,123 @@
-# Factory Inventory & Production Management System (MVP) — Architecture
+# Architecture
 
-## Overview
+## High-level runtime architecture
 
 ```text
-+------------------+     HTTPS / Bearer token      +------------------+     Mongoose      +------------------+
-|  React (Vite)    |  -------------------------->  |  Express API     |  --------------->  |  MongoDB Atlas   |
-|  Ant Design      |  <---------------------------  |  Node + TS       |  <---------------  |  (or local)      |
-|  Firebase Auth   |     JSON + 401/403            |  Firebase Admin  |                    |                  |
-+------------------+                               +------------------+                    +------------------+
-        |                                                 |
-        | Email/Password                                 | verifyIdToken
-        v                                                 v
-+------------------+                               +------------------+
-|  Firebase Auth   |                               |  Users (role)   |
-|  (client SDK)    |                               |  OWNER/EMPLOYEE/|
-|                  |                               |  WHOLESALER      |
-+------------------+                               +------------------+
+Client (React SPA on Vercel)
+  -> Firebase Auth (Email/Password) on client
+  -> Bearer token in API calls
+
+Server (Express app in Vercel serverless function)
+  -> verify Firebase ID token via Firebase Admin
+  -> load user/role from Mongo Users
+  -> enforce RBAC in middleware
+  -> execute module route logic
+  -> write stock movements + audit logs
+
+MongoDB Atlas
+  -> master data + operational transactions + reporting data
 ```
 
-- **Client**: React + Vite + TypeScript + Ant Design. Signs in with Firebase Email/Password; sends `Authorization: Bearer <idToken>` on every API request.
-- **Server**: Express + TypeScript. Verifies the token with Firebase Admin SDK, loads the user from MongoDB (Users collection) to get role, and enforces RBAC on each route.
-- **Database**: MongoDB (Atlas or local). Mongoose models for Users, Products, Suppliers, Wholesalers, BOM, GRN, Batch, RawStock, FinishedStock, StockMovement, Order, Dispatch, AuditLog.
+## Vercel-specific structure
 
-## Data flow
+- Client SPA project root: `client`
+- Server API project root: `server`
+- Serverless handler: `server/api/[...path].ts`
+- Handler boots compiled app from `server/dist`
+
+Request path behavior:
+- Public API base is `/api/*`
+- Express mounts all routes under `/api`
+- Example health endpoint: `/api/health`
+
+## Backend modules and responsibilities
+
+- `health`: liveness endpoint
+- `me`: authenticated profile endpoint
+- `users`: OWNER-only user management
+- `products`: raw materials and finished goods
+- `suppliers`: supplier master data
+- `wholesalers`: wholesaler master data
+- `grn`: draft/create/confirm stock-in
+- `bom`: bill of materials per finished product
+- `batches`: batch lifecycle (`DRAFT -> IN_PROGRESS -> COMPLETED`)
+- `orders`: create/list/update status
+- `dispatch`: FEFO allocation, stock deduction, PDF delivery note
+- `reports`: stock, movements, expiry, production, wastage, sales, traceability
+- `audit`: OWNER-only query of audit log
+
+## Core data model groups
+
+Identity and access:
+- `User` (role: OWNER, EMPLOYEE, WHOLESALER)
+
+Master data:
+- `Product`
+- `Supplier`
+- `Wholesaler`
+- `BOM`
+
+Operations:
+- `GRN`
+- `Batch`
+- `Order`
+- `Dispatch`
+
+Inventory and traceability:
+- `RawStock`
+- `FinishedStock` (by product + batch)
+- `StockMovement`
+
+Audit:
+- `AuditLog`
+
+## Critical flows
 
 ### GRN confirm
 
-1. User confirms a DRAFT GRN.
-2. Server starts a transaction: for each GRN line, increment RawStock and insert StockMovement (type GRN_IN).
-3. GRN status set to CONFIRMED; transaction committed.
-4. Audit log entry created.
+1. Validate GRN exists and is `DRAFT`.
+2. Start Mongo transaction.
+3. Increment `RawStock` per GRN line.
+4. Insert `StockMovement` records (`GRN_IN`).
+5. Update GRN to `CONFIRMED`.
+6. Commit transaction and write audit event.
 
 ### Batch complete
 
-1. User submits completion with actual qty produced, consumption lines (raw material + qty actual), and wastage.
-2. Server validates sufficient raw stock for each consumption line.
-3. Server starts a transaction: decrement RawStock per consumption; insert PROD_CONSUME movements; update Batch (consumption, actualQtyProduced, wastage, status COMPLETED); upsert FinishedStock (productId + batchId + quantity + expiry); insert PROD_OUTPUT movement.
-4. Audit log entry created.
+1. Validate batch is `IN_PROGRESS`.
+2. Validate required raw stock exists.
+3. Start Mongo transaction.
+4. Deduct raw stock and create `PROD_CONSUME` movements.
+5. Update batch with actual qty and wastage.
+6. Upsert `FinishedStock` for the batch.
+7. Create `PROD_OUTPUT` movement.
+8. Commit transaction and write audit event.
 
-### Dispatch (FEFO)
+### Dispatch with FEFO
 
-1. User creates a dispatch for a CONFIRMED order.
-2. Server loads all FinishedStock with quantity > 0, grouped by productId.
-3. For each order line (productId, qty), FEFO allocates from batches sorted by expiryDate (earliest first) until requested qty is satisfied.
-4. If any product has insufficient stock, return 400.
-5. Server starts a transaction: for each allocation, decrement FinishedStock; insert DISPATCH_OUT movement; create Dispatch record; set Order status to DISPATCHED.
-6. Delivery Note PDF can be generated on GET /api/dispatches/:id/pdf (PDFKit).
+1. Validate order exists, is `CONFIRMED`, and not already dispatched.
+2. Load available finished stock.
+3. Allocate by FEFO (earliest expiry first).
+4. Start Mongo transaction.
+5. Deduct `FinishedStock` and write `DISPATCH_OUT` movements.
+6. Create `Dispatch` and update order status to `DISPATCHED`.
+7. Commit transaction and write audit event.
+8. Delivery note PDF generated from dispatch data (`/dispatches/:id/pdf`).
 
-## RBAC
+## RBAC enforcement
 
-- **OWNER**: All routes; user management; audit log.
-- **EMPLOYEE**: Products, Suppliers, Wholesalers, GRN, BOM, Batches, Orders (list + patch status), Dispatches, Reports. No Users, no Audit.
-- **WHOLESALER**: Orders (POST, GET /orders/my), Dispatches/:id/pdf for own orders only; Products/Wholesalers read as needed. No GRN, BOM, Batches, Reports, Users, Audit.
+Middleware chain:
+- `requireAuth`: verify Firebase token
+- `loadUser`: load Mongo user by `firebaseUid`
+- `requireRole([...])`: enforce endpoint authorization
 
-Role is always read from the server-side Users collection after token verification; never trusted from the client.
+Role access:
+- OWNER: full access including users and audit
+- EMPLOYEE: operational modules and reports
+- WHOLESALER: own-order scope and allowed dispatch PDF scope
+
+## Operational constraints
+
+- Transactions rely on Mongo transaction support (replica-set environment).
+- Serverless startup path requires build artifacts (`dist`) before runtime.
+- CORS allowlist must include deployed client origin(s).

@@ -1,43 +1,67 @@
-# Factory Inventory & Production Management System (MVP) — User Guide
+# User Guide
 
 ## Roles
 
-- **OWNER (Admin)**: Manage users/roles, master data, confirm GRNs, approve operations, view all reports and audit log.
-- **EMPLOYEE**: Daily operations: GRN, BOM, batches, orders, dispatch, reports (no users/audit).
-- **WHOLESALER**: Place orders, view own orders, download delivery note PDFs.
+- OWNER: full access, user administration, audit view
+- EMPLOYEE: operations and reports
+- WHOLESALER: create/view own orders and access own dispatch PDF
 
-## Owner
+## Sign-in model
 
-1. **Users**: Create users (Firebase UID + email + role). For WHOLESALER, link a Wholesaler record. Ensure the user has signed up in Firebase Auth with the same email first (or create them via Firebase Console).
-2. **Products**: Add Raw Materials and Finished Goods (SKU, name, unit, category, reorder level, cost/selling price).
-3. **Suppliers / Wholesalers**: Create supplier and wholesaler master data.
-4. **GRN**: Create GRN (supplier + lines: raw material, qty, unit cost). Confirm GRN to increase raw material stock.
-5. **BOM**: Define Bill of Materials per finished product (components: raw material + qty per unit + unit).
-6. **Batches**: Create batch (finished product, planned qty, manufacture/expiry dates). Start batch, then complete with actual qty, consumption (from BOM or override with reason), and wastage.
-7. **Orders**: View all orders; confirm DRAFT orders. Dispatching is done from the Dispatches module.
-8. **Dispatches**: Create dispatch for a CONFIRMED order (FEFO allocation is automatic). This updates stock and order status. Download Delivery Note PDF.
-9. **Reports**: Stock on hand (raw + finished by batch), movements, expiry, production, wastage.
-10. **Audit**: View audit log of critical actions.
+1. User signs in through Firebase Email/Password.
+2. Backend verifies token and maps Firebase UID to Mongo `User` record.
+3. If Firebase auth exists but no Mongo `User` exists, access is blocked until user is added.
 
-## Employee
+## Owner workflow
 
-1. Create/edit GRNs and confirm them.
-2. Maintain BOMs and batches (create, start, complete with consumption and wastage).
-3. View and confirm order status (confirm only).
-4. Create dispatches for confirmed orders; download PDFs.
-5. Use all reports (stock, movements, expiry, production, wastage). No access to Users or Audit.
+1. Add master data:
+   - Products
+   - Suppliers
+   - Wholesalers
+2. Manage user records in Users page.
+3. Create and confirm GRNs.
+4. Manage BOMs.
+5. Start and monitor batches.
+6. Confirm/cancel orders.
+7. Create dispatches for confirmed orders.
+8. Download delivery note PDFs.
+9. Use reports and audit logs.
 
-## Wholesaler
+## Employee workflow
 
-1. Place orders (select finished products and quantities). Orders are created as DRAFT.
-2. View **My Orders** (list and status).
-3. After internal team confirms and dispatches, download Delivery Note PDF from the dispatch record.
+1. Maintain GRNs and confirm them.
+2. Maintain BOMs.
+3. Start batches and monitor production records.
+4. Confirm/cancel orders.
+5. Create dispatches.
+6. Use reports.
 
-## Agile MVP backlog (short)
+## Wholesaler workflow
 
-- [ ] Batch creation wizard (prefill consumption from BOM).
-- [ ] Order creation form for wholesaler (product picker + qty).
-- [ ] Dashboard widgets (low stock, expiring soon, pending GRNs).
-- [ ] Email notifications (order confirmed, dispatch done).
-- [ ] Traceability report UI (by wholesaler/order).
-- [ ] Adjustments (stock correction) with reason and audit.
+1. Place orders from Orders page.
+2. View own order statuses.
+3. Download dispatch delivery note PDF when available.
+
+## Current UI coverage notes
+
+Current UI coverage includes:
+- master data management (products/suppliers/wholesalers)
+- GRN create + confirm
+- BOM create/list and batch create/start/complete
+- orders + dispatch + delivery-note PDF
+- reports tabs (stock, movements, expiry, production, wastage, sales-by-wholesaler, traceability)
+- owner-only users + audit log
+
+Advanced edge-case operations still remain API-first (for example custom dispatch allocation overrides and deep data exports).
+
+## Core status transitions
+
+- GRN: `DRAFT -> CONFIRMED`
+- Batch: `DRAFT -> IN_PROGRESS -> COMPLETED`
+- Order: `DRAFT -> CONFIRMED -> DISPATCHED`, or `CANCELLED`
+
+## Quick troubleshooting for users
+
+- "Account not registered": ask OWNER to create a User record with correct Firebase UID.
+- Dispatch blocked: order must be `CONFIRMED` and finished stock must be sufficient.
+- CORS/network errors in browser: deployment env vars likely mismatched (`VITE_API_BASE_URL` or `CORS_ORIGINS`).

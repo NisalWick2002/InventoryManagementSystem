@@ -8,8 +8,7 @@ import {
   StockMovement,
   Batch,
   Order,
-  Dispatch,
-  Product,
+  Dispatch
 } from '../../db/models/index.js';
 import mongoose from 'mongoose';
 
@@ -197,3 +196,4 @@ router.get('/reports/traceability', internalOnly, validateQuery(traceabilityQuer
 });
 
 export default router;
+

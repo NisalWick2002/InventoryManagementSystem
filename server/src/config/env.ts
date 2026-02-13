@@ -22,6 +22,10 @@ const envSchema = z.object({
     : z.string().min(1, 'FIREBASE_PRIVATE_KEY is required'),
   OWNER_EMAIL: z.string().email().optional(),
   CORS_ORIGINS: z.string().default('http://localhost:5173'),
+  ALLOW_VERCEL_PREVIEWS: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   API_BASE_URL: z.string().url().optional(),
   RATE_LIMIT_ENABLED: z
     .enum(['true', 'false'])
@@ -39,7 +43,7 @@ if (!parsed.success) {
 
 export const env = parsed.data;
 
-// Normalize private key (replace literal \n with newline)
+// Normalize private key (replace literal \\n with newline)
 if (env.FIREBASE_PRIVATE_KEY && env.FIREBASE_PRIVATE_KEY.includes('\\n')) {
   env.FIREBASE_PRIVATE_KEY = env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
 }

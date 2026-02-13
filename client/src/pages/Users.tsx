@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Typography, Tag, Space, Modal, Form, Input, Select, message } from 'antd';
+import { Table, Button, Typography, Tag, Space, Modal, Form, Input, Select, message, Alert } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
 
@@ -59,6 +59,12 @@ export default function Users() {
       </Space>
       <Table rowKey="_id" loading={loading} columns={columns} dataSource={items} pagination={{ pageSize: 20 }} />
       <Modal title="Add User" open={modalOpen} onCancel={() => setModalOpen(false)} footer={null} destroyOnClose>
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="Use Firebase UID from Firebase Console -> Authentication -> Users. The user should already exist in Firebase Auth."
+        />
         <Form form={form} layout="vertical" onFinish={onFinish}>
           <Form.Item name="firebaseUid" label="Firebase UID" rules={[{ required: true }]}><Input placeholder="From Firebase Auth" /></Form.Item>
           <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}><Input /></Form.Item>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Tabs, Table, Typography, DatePicker, InputNumber, Button, Space, message } from 'antd';
+import { Tabs, Table, Typography, DatePicker, InputNumber, Button, Space, message, Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { api } from '../api/client';
@@ -14,15 +14,24 @@ export default function Reports() {
   const [expiry, setExpiry] = useState<Array<Record<string, unknown>>>([]);
   const [production, setProduction] = useState<Array<Record<string, unknown>>>([]);
   const [wastage, setWastage] = useState<Array<Record<string, unknown>>>([]);
+  const [sales, setSales] = useState<Array<Record<string, unknown>>>([]);
+  const [traceability, setTraceability] = useState<Array<Record<string, unknown>>>([]);
+  const [traceWholesalerId, setTraceWholesalerId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([dayjs().subtract(30, 'day'), dayjs()]);
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
+    dayjs().subtract(30, 'day'),
+    dayjs(),
+  ]);
   const [days, setDays] = useState(30);
   const from = dateRange[0]?.toISOString() ?? new Date().toISOString();
   const to = dateRange[1]?.toISOString() ?? new Date().toISOString();
 
   const loadStock = () => {
     setLoading(true);
-    api.get<{ success: boolean; data: { rawMaterials: unknown[]; finishedGoods: unknown[] } }>('/reports/stock-on-hand')
+    api
+      .get<{ success: boolean; data: { rawMaterials: unknown[]; finishedGoods: unknown[] } }>(
+        '/reports/stock-on-hand'
+      )
       .then((r) => {
         if (r.data.success && r.data.data) {
           setStockRaw((r.data.data.rawMaterials as Array<Record<string, unknown>>) ?? []);
@@ -35,9 +44,13 @@ export default function Reports() {
 
   const loadMovements = () => {
     setLoading(true);
-    api.get<{ success: boolean; data: { items: unknown[] } }>(`/reports/movements?from=${from}&to=${to}&limit=100`)
+    api
+      .get<{ success: boolean; data: { items: unknown[] } }>(
+        `/reports/movements?from=${from}&to=${to}&limit=100`
+      )
       .then((r) => {
-        if (r.data.success && r.data.data?.items) setMovements(r.data.data.items as Array<Record<string, unknown>>);
+        if (r.data.success && r.data.data?.items)
+          setMovements(r.data.data.items as Array<Record<string, unknown>>);
       })
       .catch(() => message.error('Failed'))
       .finally(() => setLoading(false));
@@ -45,9 +58,11 @@ export default function Reports() {
 
   const loadExpiry = () => {
     setLoading(true);
-    api.get<{ success: boolean; data: { items: unknown[] } }>(`/reports/expiry?days=${days}`)
+    api
+      .get<{ success: boolean; data: { items: unknown[] } }>(`/reports/expiry?days=${days}`)
       .then((r) => {
-        if (r.data.success && r.data.data?.items) setExpiry(r.data.data.items as Array<Record<string, unknown>>);
+        if (r.data.success && r.data.data?.items)
+          setExpiry(r.data.data.items as Array<Record<string, unknown>>);
       })
       .catch(() => message.error('Failed'))
       .finally(() => setLoading(false));
@@ -55,9 +70,13 @@ export default function Reports() {
 
   const loadProduction = () => {
     setLoading(true);
-    api.get<{ success: boolean; data: { items: unknown[] } }>(`/reports/production?from=${from}&to=${to}`)
+    api
+      .get<{ success: boolean; data: { items: unknown[] } }>(
+        `/reports/production?from=${from}&to=${to}`
+      )
       .then((r) => {
-        if (r.data.success && r.data.data?.items) setProduction(r.data.data.items as Array<Record<string, unknown>>);
+        if (r.data.success && r.data.data?.items)
+          setProduction(r.data.data.items as Array<Record<string, unknown>>);
       })
       .catch(() => message.error('Failed'))
       .finally(() => setLoading(false));
@@ -65,9 +84,40 @@ export default function Reports() {
 
   const loadWastage = () => {
     setLoading(true);
-    api.get<{ success: boolean; data: { items: unknown[] } }>(`/reports/wastage?from=${from}&to=${to}`)
+    api
+      .get<{ success: boolean; data: { items: unknown[] } }>(`/reports/wastage?from=${from}&to=${to}`)
       .then((r) => {
-        if (r.data.success && r.data.data?.items) setWastage(r.data.data.items as Array<Record<string, unknown>>);
+        if (r.data.success && r.data.data?.items)
+          setWastage(r.data.data.items as Array<Record<string, unknown>>);
+      })
+      .catch(() => message.error('Failed'))
+      .finally(() => setLoading(false));
+  };
+
+  const loadSales = () => {
+    setLoading(true);
+    api
+      .get<{ success: boolean; data: { byWholesaler: unknown[] } }>(
+        `/reports/sales-by-wholesaler?from=${from}&to=${to}`
+      )
+      .then((r) => {
+        if (r.data.success && r.data.data?.byWholesaler)
+          setSales(r.data.data.byWholesaler as Array<Record<string, unknown>>);
+      })
+      .catch(() => message.error('Failed'))
+      .finally(() => setLoading(false));
+  };
+
+  const loadTraceability = () => {
+    setLoading(true);
+    const query = traceWholesalerId?.trim()
+      ? `?wholesalerId=${encodeURIComponent(traceWholesalerId.trim())}`
+      : '';
+    api
+      .get<{ success: boolean; data: { trace: unknown[] } }>(`/reports/traceability${query}`)
+      .then((r) => {
+        if (r.data.success && r.data.data?.trace)
+          setTraceability(r.data.data.trace as Array<Record<string, unknown>>);
       })
       .catch(() => message.error('Failed'))
       .finally(() => setLoading(false));
@@ -87,17 +137,30 @@ export default function Reports() {
     { title: 'Product', dataIndex: ['productId', 'name'], key: 'product' },
     { title: 'Qty', dataIndex: 'qty', key: 'qty', width: 80 },
     { title: 'Unit', dataIndex: 'unit', key: 'unit', width: 80 },
-    { title: 'Date', dataIndex: 'createdAt', key: 'date', width: 160, render: (d: string) => d ? new Date(d).toLocaleString() : '-' },
+    {
+      title: 'Date',
+      dataIndex: 'createdAt',
+      key: 'date',
+      width: 160,
+      render: (d: string) => (d ? new Date(d).toLocaleString() : '-'),
+    },
   ];
 
   const expiryColumns: ColumnsType<ReportRow> = [
     ...stockCols,
-    { title: 'Expiry', dataIndex: 'expiryDate', key: 'expiry', render: (d: string) => d ? new Date(d).toLocaleDateString() : '-' },
+    {
+      title: 'Expiry',
+      dataIndex: 'expiryDate',
+      key: 'expiry',
+      render: (d: string) => (d ? new Date(d).toLocaleDateString() : '-'),
+    },
   ];
 
   return (
     <>
-      <Title level={4} className="page-title">Reports</Title>
+      <Title level={4} className="page-title">
+        Reports
+      </Title>
       <Tabs
         items={[
           {
@@ -105,10 +168,36 @@ export default function Reports() {
             label: 'Stock on hand',
             children: (
               <>
-                <Button type="primary" onClick={loadStock} loading={loading} className="reports-action">Load</Button>
-                <Table rowKey="_id" loading={loading} dataSource={stockRaw} columns={stockCols} pagination={false} size="small" />
-                <Title level={5} className="reports-section-title">Finished goods by batch</Title>
-                <Table rowKey="_id" dataSource={stockFinished} columns={[...stockCols, { title: 'Batch', dataIndex: ['batchId', 'batchId'], key: 'batch' }, { title: 'Expiry', dataIndex: 'expiryDate', key: 'expiry', render: (d: string) => d ? new Date(d).toLocaleDateString() : '-' }]} pagination={false} size="small" />
+                <Button type="primary" onClick={loadStock} loading={loading} className="reports-action">
+                  Load
+                </Button>
+                <Table
+                  rowKey="_id"
+                  loading={loading}
+                  dataSource={stockRaw}
+                  columns={stockCols}
+                  pagination={false}
+                  size="small"
+                />
+                <Title level={5} className="reports-section-title">
+                  Finished goods by batch
+                </Title>
+                <Table
+                  rowKey="_id"
+                  dataSource={stockFinished}
+                  columns={[
+                    ...stockCols,
+                    { title: 'Batch', dataIndex: ['batchId', 'batchId'], key: 'batch' },
+                    {
+                      title: 'Expiry',
+                      dataIndex: 'expiryDate',
+                      key: 'expiry',
+                      render: (d: string) => (d ? new Date(d).toLocaleDateString() : '-'),
+                    },
+                  ]}
+                  pagination={false}
+                  size="small"
+                />
               </>
             ),
           },
@@ -118,10 +207,24 @@ export default function Reports() {
             children: (
               <>
                 <Space className="reports-toolbar">
-                  <RangePicker value={dateRange} onChange={(dates) => { if (dates?.[0] && dates?.[1]) setDateRange([dates[0], dates[1]]); }} />
-                  <Button type="primary" onClick={loadMovements} loading={loading}>Load</Button>
+                  <RangePicker
+                    value={dateRange}
+                    onChange={(dates) => {
+                      if (dates?.[0] && dates?.[1]) setDateRange([dates[0], dates[1]]);
+                    }}
+                  />
+                  <Button type="primary" onClick={loadMovements} loading={loading}>
+                    Load
+                  </Button>
                 </Space>
-                <Table rowKey="_id" loading={loading} dataSource={movements} columns={movementCols} pagination={{ pageSize: 20 }} size="small" />
+                <Table
+                  rowKey="_id"
+                  loading={loading}
+                  dataSource={movements}
+                  columns={movementCols}
+                  pagination={{ pageSize: 20 }}
+                  size="small"
+                />
               </>
             ),
           },
@@ -131,10 +234,24 @@ export default function Reports() {
             children: (
               <>
                 <Space className="reports-toolbar">
-                  <InputNumber min={1} value={days} onChange={(v) => setDays(v ?? 30)} addonBefore="Within days" />
-                  <Button type="primary" onClick={loadExpiry} loading={loading}>Load</Button>
+                  <InputNumber
+                    min={1}
+                    value={days}
+                    onChange={(v) => setDays(v ?? 30)}
+                    addonBefore="Within days"
+                  />
+                  <Button type="primary" onClick={loadExpiry} loading={loading}>
+                    Load
+                  </Button>
                 </Space>
-                <Table rowKey="_id" loading={loading} dataSource={expiry} columns={expiryColumns} pagination={false} size="small" />
+                <Table
+                  rowKey="_id"
+                  loading={loading}
+                  dataSource={expiry}
+                  columns={expiryColumns}
+                  pagination={false}
+                  size="small"
+                />
               </>
             ),
           },
@@ -144,10 +261,34 @@ export default function Reports() {
             children: (
               <>
                 <Space className="reports-toolbar">
-                  <RangePicker value={dateRange} onChange={(dates) => { if (dates?.[0] && dates?.[1]) setDateRange([dates[0], dates[1]]); }} />
-                  <Button type="primary" onClick={loadProduction} loading={loading}>Load</Button>
+                  <RangePicker
+                    value={dateRange}
+                    onChange={(dates) => {
+                      if (dates?.[0] && dates?.[1]) setDateRange([dates[0], dates[1]]);
+                    }}
+                  />
+                  <Button type="primary" onClick={loadProduction} loading={loading}>
+                    Load
+                  </Button>
                 </Space>
-                <Table rowKey="_id" loading={loading} dataSource={production} columns={[{ title: 'Batch', dataIndex: 'batchId', key: 'batchId' }, { title: 'Product', dataIndex: ['finishedProductId', 'name'], key: 'product' }, { title: 'Actual Qty', dataIndex: 'actualQtyProduced', key: 'qty' }, { title: 'Completed', dataIndex: 'completedAt', key: 'date', render: (d: string) => d ? new Date(d).toLocaleString() : '-' }]} pagination={false} size="small" />
+                <Table
+                  rowKey="_id"
+                  loading={loading}
+                  dataSource={production}
+                  columns={[
+                    { title: 'Batch', dataIndex: 'batchId', key: 'batchId' },
+                    { title: 'Product', dataIndex: ['finishedProductId', 'name'], key: 'product' },
+                    { title: 'Actual Qty', dataIndex: 'actualQtyProduced', key: 'qty' },
+                    {
+                      title: 'Completed',
+                      dataIndex: 'completedAt',
+                      key: 'date',
+                      render: (d: string) => (d ? new Date(d).toLocaleString() : '-'),
+                    },
+                  ]}
+                  pagination={false}
+                  size="small"
+                />
               </>
             ),
           },
@@ -157,10 +298,111 @@ export default function Reports() {
             children: (
               <>
                 <Space className="reports-toolbar">
-                  <RangePicker value={dateRange} onChange={(dates) => { if (dates?.[0] && dates?.[1]) setDateRange([dates[0], dates[1]]); }} />
-                  <Button type="primary" onClick={loadWastage} loading={loading}>Load</Button>
+                  <RangePicker
+                    value={dateRange}
+                    onChange={(dates) => {
+                      if (dates?.[0] && dates?.[1]) setDateRange([dates[0], dates[1]]);
+                    }}
+                  />
+                  <Button type="primary" onClick={loadWastage} loading={loading}>
+                    Load
+                  </Button>
                 </Space>
-                <Table rowKey="_id" loading={loading} dataSource={wastage} columns={[{ title: 'Batch', dataIndex: 'batchId', key: 'batchId' }, { title: 'Product', dataIndex: ['finishedProductId', 'name'], key: 'product' }, { title: 'Wastage Qty', dataIndex: 'wastageQty', key: 'wastage' }, { title: 'Reason', dataIndex: 'wastageReason', key: 'reason' }]} pagination={false} size="small" />
+                <Table
+                  rowKey="_id"
+                  loading={loading}
+                  dataSource={wastage}
+                  columns={[
+                    { title: 'Batch', dataIndex: 'batchId', key: 'batchId' },
+                    { title: 'Product', dataIndex: ['finishedProductId', 'name'], key: 'product' },
+                    { title: 'Wastage Qty', dataIndex: 'wastageQty', key: 'wastage' },
+                    { title: 'Reason', dataIndex: 'wastageReason', key: 'reason' },
+                  ]}
+                  pagination={false}
+                  size="small"
+                />
+              </>
+            ),
+          },
+          {
+            key: 'sales',
+            label: 'Sales by wholesaler',
+            children: (
+              <>
+                <Space className="reports-toolbar">
+                  <RangePicker
+                    value={dateRange}
+                    onChange={(dates) => {
+                      if (dates?.[0] && dates?.[1]) setDateRange([dates[0], dates[1]]);
+                    }}
+                  />
+                  <Button type="primary" onClick={loadSales} loading={loading}>
+                    Load
+                  </Button>
+                </Space>
+                <Table
+                  rowKey={(r) => String((r as { name?: string }).name ?? Math.random())}
+                  loading={loading}
+                  dataSource={sales}
+                  columns={[
+                    { title: 'Wholesaler', dataIndex: 'name', key: 'name' },
+                    { title: 'Order Count', dataIndex: 'orderCount', key: 'orderCount' },
+                    { title: 'Total Qty', dataIndex: 'totalQty', key: 'totalQty' },
+                  ]}
+                  pagination={false}
+                  size="small"
+                />
+              </>
+            ),
+          },
+          {
+            key: 'traceability',
+            label: 'Traceability',
+            children: (
+              <>
+                <Space className="reports-toolbar">
+                  <Input
+                    value={traceWholesalerId}
+                    onChange={(e) => setTraceWholesalerId(e.target.value)}
+                    placeholder="Optional wholesalerId"
+                    style={{ width: 280 }}
+                  />
+                  <Button type="primary" onClick={loadTraceability} loading={loading}>
+                    Load
+                  </Button>
+                </Space>
+                <Table
+                  rowKey={(r) => String((r as { dispatchId?: string }).dispatchId ?? Math.random())}
+                  loading={loading}
+                  dataSource={traceability}
+                  columns={[
+                    { title: 'Dispatch', dataIndex: 'dispatchId', key: 'dispatchId' },
+                    { title: 'Order', dataIndex: 'orderId', key: 'orderId' },
+                    {
+                      title: 'Allocations',
+                      key: 'allocations',
+                      render: (_: unknown, row: Record<string, unknown>) => {
+                        const allocations = (row.allocations as Array<Record<string, unknown>>) ?? [];
+                        return allocations
+                          .map((a) => {
+                            const product = (a.productId as { name?: string })?.name ?? 'Product';
+                            const batch = (a.batchId as { batchId?: string })?.batchId ?? 'Batch';
+                            const qty = a.qty ?? 0;
+                            return `${product}: ${qty} (${batch})`;
+                          })
+                          .join('; ');
+                      },
+                    },
+                    {
+                      title: 'Dispatched At',
+                      dataIndex: 'dispatchedAt',
+                      key: 'dispatchedAt',
+                      render: (d: string) => (d ? new Date(d).toLocaleString() : '-'),
+                    },
+                  ]}
+                  pagination={{ pageSize: 20 }}
+                  size="small"
+                />
               </>
             ),
           },

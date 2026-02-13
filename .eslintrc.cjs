@@ -1,11 +1,7 @@
 module.exports = {
   root: true,
   env: { node: true, es2022: true },
-  extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'prettier',
-  ],
+  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended'],
   parser: '@typescript-eslint/parser',
   parserOptions: { ecmaVersion: 2022, sourceType: 'module' },
   plugins: ['@typescript-eslint'],
@@ -14,12 +10,18 @@ module.exports = {
     {
       files: ['client/**/*.{ts,tsx}'],
       env: { browser: true },
-      parserOptions: { project: './client/tsconfig.json' },
+      parserOptions: {
+        project: ['./client/tsconfig.json'],
+        tsconfigRootDir: __dirname,
+      },
     },
     {
       files: ['server/**/*.ts'],
       env: { node: true },
-      parserOptions: { project: './server/tsconfig.json' },
+      parserOptions: {
+        project: ['./server/tsconfig.json'],
+        tsconfigRootDir: __dirname,
+      },
     },
   ],
 };
